@@ -2,8 +2,8 @@ from setuptools import find_packages, setup
 
 
 setup(
-    name="mypackage",
-    version="1.0.0",
+    name="pygwrapper",
+    version="1.0.1",
     packages=find_packages(),
     install_requires=[
         "pygame"
@@ -12,7 +12,7 @@ setup(
     description="A simple pygame Wrapper package",
     author="Michael Naef",
     author_email="mister_naef@hotmail.com",
-    url="https://github.com/yourusername/my_package",
+    url="",
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',
