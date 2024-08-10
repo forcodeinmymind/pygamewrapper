@@ -7,7 +7,7 @@ import pygame.freetype
 def get_abs_metrics(font: pygame.freetype.Font, \
                     str_calibration: str, \
                     notdef_metrics: tuple[int, int, int, int, float, float] | None) \
-    -> tuple[int, int, int, int, float, float]:
+                    -> tuple[int, int, int, int, float, float]:
     """get absolute metrics of `str_calibration` with `font`
     """
 
@@ -30,16 +30,16 @@ def get_abs_metrics(font: pygame.freetype.Font, \
             advy.add(metrics[ADVY])
 
     if notdef_metrics is not None:
-        minx.add(self.notdef_metrics[MINX])
-        maxx.add(self.notdef_metrics[MAXX])
-        miny.add(self.notdef_metrics[MINY])
-        maxy.add(self.notdef_metrics[MAXY])
-        advx.add(self.notdef_metrics[ADVX])
-        advy.add(self.notdef_metrics[ADVY])
+        minx.add(notdef_metrics[MINX])
+        maxx.add(notdef_metrics[MAXX])
+        miny.add(notdef_metrics[MINY])
+        maxy.add(notdef_metrics[MAXY])
+        advx.add(notdef_metrics[ADVX])
+        advy.add(notdef_metrics[ADVY])
 
     if not all((minx, maxx, miny, maxy, advx, advy)):
         NEWLINE = "NEWLINE"
-        raise ValueError(f"{self}.get_abs_metrics({self.font.name}, {str_calibration:.10}...){NEWLINE}ERROR: Metrics partially or completely not available!")
+        raise ValueError(f"{__name__}.get_abs_metrics({font.name}, {str_calibration:.10}...){NEWLINE}ERROR: Metrics partially or completely not available!")
 
     if min(minx) > 0:
         minx = {0, }

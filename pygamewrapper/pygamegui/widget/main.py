@@ -1,4 +1,4 @@
-from pygamegui.pygamewrapper.sprite import Sprite
+from pygamewrapper.sprite import Sprite
 
 
 class Widget(Sprite):

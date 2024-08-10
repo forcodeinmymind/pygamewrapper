@@ -1,1 +1,1 @@
-from .main import TextSprite
+from .main import Text

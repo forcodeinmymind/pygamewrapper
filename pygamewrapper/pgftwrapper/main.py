@@ -8,15 +8,19 @@ from .monospacemetrics import is_monospace
 
 
 
+class FTWrapperError(Exception):
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
+
+
 class FTWrapper:
-
     def __init__(self):
-
         self.file_calibration: str = "Codepage 850_manuel sorted.txt"
 
         self.font: pygame.freetype.Font | None = None
-        self.origin: bool = False
-        self.pad: bool = False
+        # self.origin: bool = False
+        # self.pad: bool = False
         self.monospace: bool = False
 
         self.abs_metrics_minx_min: int = 0
@@ -43,6 +47,9 @@ class FTWrapper:
         self.show_bb_grapheme = False
         self.show_bb_text = False
 
+    def __str__(self) -> str:
+        return f"PygameFreeTypeWrapper({os.path.basename(self.font.path), self.font.size})"
+
     def str_attrs(self) -> str:
         string = str()
         for e in dir(self):
@@ -51,10 +58,15 @@ class FTWrapper:
                 string += f"{e}: {getattr(self, e)}\n"
         return string
 
-    def set_font(self, name: str = None, size: int = 18) -> None:
+    def set_font(self, name: str | None = None, size: int = 18) -> None:
         cur_font = self.font
         self.font = pygame.freetype.SysFont(name, size)
-
+        if self.font.name == "FreeSans" and \
+           name != "FreeSans":
+            try:
+                FTWrapperError(".set_font({name=}, {size=}) no corresponding font available")
+            except FTWrapperError as error:
+                print(error)
         if cur_font is not None:
             self.font.fgcolor = cur_font.fgcolor
             self.font.bgcolor = cur_font.bgcolor
@@ -63,7 +75,6 @@ class FTWrapper:
         else:
             self.font.fgcolor = (255, 102, 102, 255)
             self.font.bgcolor = (  0,  51, 102, 255)
-
         self.c_cursor_fgcolor = self.font.fgcolor
         self.c_cursor_bgcolor = self.font.bgcolor
         self.set_notdef_metrics()
@@ -89,7 +100,6 @@ class FTWrapper:
         with open(self.file_calibration, "r", encoding='utf-8') as file:
             str_calibration = file.read()
         """
-
         minx_min = set()
         miny_min = set()
         maxy_max = set()
@@ -116,7 +126,6 @@ class FTWrapper:
         self.abs_metrics_miny_min = min(miny_min)
         self.abs_metrics_maxy_max = max(maxy_max)
         self.set_monospace(str_calibration)
-
 
     def set_monospace(self, str_calibration: str = ""):
         set_advx = set()
@@ -148,7 +157,6 @@ class FTWrapper:
         else:
             return area.topleft
 
-
     # ...
     def convert_metrics(self, metrics = None) -> tuple[int, int, int, int, float, float]:
         if metrics is None:
@@ -156,16 +164,13 @@ class FTWrapper:
         else:
             return metrics[MINX], metrics[MAXX], metrics[MINY], metrics[MAXY], self.conv_avdx(metrics[ADVX]), self.conv_avdx(metrics[ADVY])
 
-
     def get_metrics(self, text: str = ""):
         for metrics in self.font.get_metrics(text):
             yield self.convert_metrics(metrics)
 
-
     # string function
     def text_pos_to_index(self, string: str, pos: tuple[int, int]) -> int:
         return sum(len(str_line) for str_line in string.splitlines(self.keeplinebreaks)[0:pos[1]]) + pos[0]
-
 
     # local
     def get_linespace(self) -> int:
@@ -178,26 +183,28 @@ class FTWrapper:
         return self.pen_x_zero + sum(metrics[ADVX] for metrics in self.get_metrics(str_line[0:column]))
 
     def get_pen_right(self, str_line: str = "", column: int = 0) -> int:
-        last_metrics = next(self.get_metrics(str_line[-1]))
+        last_metrics = next(self.get_metrics(str_line[column])) if len(str_line) else [0, 0, 0, 0, 0.0, 0.0]
         return self.get_pen_x(str_line, column) + max(last_metrics[MAXX], last_metrics[ADVX])
 
     def get_text_width(self, text: str) -> int:
-        return max(self.get_pen_right(str_line, -1) for str_line in text.splitlines(self.keeplinebreaks))
+        if len(text):
+            return max(self.get_pen_right(str_line, -1) for str_line in text.splitlines(self.keeplinebreaks))
+        else:
+            return self.pen_x_zero
 
     def get_text_size(self, text: str = "") -> tuple[int, int]:
         return self.get_text_width(text), \
                self.__get_pen_y(len(text.splitlines()) - 1) - self.abs_metrics_miny_min
 
+    def get_text_size_max(self, size_chr: tuple[int, int]):
+        pass
 
     # transform
-
     def tranform_to_global(self, axe: int = 0, dist: int = 0, area_axe: int = 0) -> int:
         return axe + dist - area_axe
 
-
     def transform_to_local(self, axe: int = 0, dist: int = 0, area_axe: int = 0) -> int:
         return axe - dist + area_axe
-
 
     def transform_rect_to_global(self, \
                                  dest: tuple[int, int] = (0, 0), \
@@ -205,95 +212,65 @@ class FTWrapper:
                                  area: pygame.Rect = None, \
                                  do_clip: bool = True) \
                                  -> pygame.Rect:
-
         rect.x += dest[0]
         rect.y += dest[1]
-
         if area is not None:
-
             rect.x -= area.x
             rect.y -= area.y
-
             if do_clip:
-
                 area = pygame.Rect(dest[0], dest[1], *area.size)
-
                 rect = area.clip(rect)
-
         return rect
 
 
     # get rects
 
     def get_tile_rects(self, dest: tuple[int, int] = (0, 0), text: str = "", area: pygame.Rect = None):
-
         for line, str_line in enumerate(text.splitlines(self.keeplinebreaks)):
-
             pen_y = self.__get_pen_y(line)
             pen_x = self.pen_x_zero
-
             for column, metrics in enumerate(self.get_metrics(str_line)):
-
                 rect_tile = pygame.Rect(pen_x, pen_y - self.line_ascend, \
                                         metrics[ADVX], self.get_linespace())
-
                 rect_tile = self.transform_rect_to_global(dest, rect_tile, area)
-
                 yield rect_tile
-
                 pen_x += metrics[ADVX]
 
-
     def get_grapheme_rects(self, dest: tuple[int, int] = (0, 0), text: str = "", area: pygame.Rect = None) -> pygame.Rect:
-
         for line, str_line in enumerate(text.splitlines(self.keeplinebreaks)):
-
             pen_y = self.__get_pen_y(line)
             pen_x = self.pen_x_zero
-
             for metrics in self.get_metrics(str_line):
-
                 rect_grapheme = pygame.Rect(pen_x + metrics[MINX], \
                                             pen_y - min(metrics[MAXY], self.line_ascend), \
                                             metrics[MAXX] - metrics[MINX], \
                                             min(metrics[MAXY], self.line_ascend) - metrics[MINY])
 
                 rect_grapheme = self.transform_rect_to_global(dest, rect_grapheme, area)
-
                 yield rect_grapheme
-
                 pen_x += metrics[ADVX]
-
 
     def get_subtext_tile_rect(self, \
                               text: str = "", \
                               line: int = 0, \
                               start: int = 0, \
                               end: int = 0) -> pygame.Rect | None:
-
         if start < 0:
             raise IndexError()
-
         if start > end:
             raise IndexError()
-
         textline = text.splitlines(self.keeplinebreaks)[line]
-
         if start >= len(textline):
             return None
-
         if end >= len(textline):
             end = len(textline) - 1
-
         pen_x = self.pen_x_zero
-
         for column, metrics in enumerate(self.get_metrics(textline[0:end])):
             if column == start:
                 pen_x_start = pen_x
             if column == end - 1:
                 rect_right = pen_x + metrics[ADVX]
             pen_x += metrics[ADVX]
-            
         return pygame.Rect(pen_x_start, \
                            self.__get_pen_y(line) - self.line_ascend, \
                            rect_right - pen_x_start, \
@@ -307,16 +284,13 @@ class FTWrapper:
                       length: int = 0, \
                       y: int = 0) \
                       -> int:
-
         line: int = y // self.get_linespace()
-
         if line < 0:
             return -1
         elif line >= length:
             return length
         else:
             return line
-
 
     def collideline_x(self, \
                       textline: str = "", \
@@ -327,22 +301,16 @@ class FTWrapper:
 
         if x < 0:
             return self.pen_x_zero, -1
-
         column = 0
         column_x = self.pen_x_zero
-
         for grapheme in textline:
             metrics = next(self.get_metrics(grapheme))
-
             if column_x + max(metrics[ADVX], metrics[MAXX]) > x:
                 break
-
             else:
                 column += 1
                 column_x += metrics[ADVX]
-
         return column_x, column
-
 
     def contains_x(self, \
                    textline: str = "", \
@@ -353,12 +321,9 @@ class FTWrapper:
 
         if start_x is None:
             column_x = self.get_pen_x(textline, start)
-
         column = start
-
         if right <= column_x:
             return start
-
         for grapheme in textline[start:]:
             metrics = next(self.get_metrics(grapheme))
             if column_x + min(0, metrics[MINX]) >= right:
@@ -368,26 +333,20 @@ class FTWrapper:
                 column_x += metrics[ADVX]
         return column
 
-
     def get_line_match(self, \
                        textline: str = "", \
                        line: int = 0, \
                        area: pygame.Rect | None = None, \
                        sectors: dict | None = None) \
                        -> tuple[int, int, int]:
-
         # -> pen_x, start, end
-
         # AREA_PEN_X = 0
         # AREA_START = 1
         # AREA_END = 2
-
         area_pen_x, area_start, area_end = self.get_line_match_area(textline, line, area)
-
         # ?! changed: collideline_x; if x < 0 -> -1, instead -> 0
         if area_start < 0:
             area_start = 0
-
         if sectors is None:
             return area_pen_x, area_start, area_end
         else:
@@ -450,11 +409,9 @@ class FTWrapper:
                      pos: tuple[int, int] = (0, 0), \
                      area: pygame.Rect | None = None) \
                      -> tuple[int, int] | None:
-
         if area is not None:
             if not area.collidepoint(pos):
                 return None
-
         line = self.collideline_y(len(text.splitlines(self.keeplinebreaks)), pos[Y])
         if 0 <= line < len(text.splitlines(self.keeplinebreaks)):
             return self.collideline_x(text.splitlines(self.keeplinebreaks)[line], pos[X])[1], line
@@ -471,11 +428,9 @@ class FTWrapper:
                        -> str | None:
 
         str_diagnose = str()
-
         if area is None and \
             sectors is None and \
             self.linespace_factor >= 1.0:
-            
             str_diagnose = str(self.render_text_basic(source, dest, text))
         else:
             str_diagnose = self.render_text_cut(source, dest, text, area, sectors)
@@ -493,8 +448,7 @@ class FTWrapper:
                           source: pygame.Surface = None, \
                           dest: tuple[int, int] = (0, 0), \
                           text: str = "") \
-                          -> str | None:
-
+                          -> pygame.Rect:
         for line, str_line in enumerate(text.splitlines(self.keeplinebreaks)):
             surf_line, rect_line = self.font.render(str_line)
             blit_x = dest[X] + self.pen_x_zero + rect_line.x
@@ -618,5 +572,10 @@ class FTWrapper:
                                   self.get_linespace())
         rect_cursor = self.transform_rect_to_global(dest, rect_cursor, area)
         pygame.draw.rect(source, self.c_cursor_fgcolor, rect_cursor)
+
+    def __in_range(self, data, end: int) -> bool:
+        """check if index/column is in range"""
+        return -len(data) <= end < len(data)
+
 
 

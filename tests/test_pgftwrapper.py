@@ -164,6 +164,8 @@ if __name__ == "__main__":
     pygame.key.set_repeat(250, 125)
 
     surf: pygame.Surface = pygame.display.set_mode((1920, 1080))
+    # surf: pygame.Surface = pygame.display.set_mode((1600, 900))
+    # surf: pygame.Surface = pygame.display.set_mode((1024, 576))
     clock: pygame.time.Clock = pygame.time.Clock()
 
     ftwrapper = pgftwrapper.FTWrapper()
