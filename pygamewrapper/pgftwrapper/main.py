@@ -23,9 +23,10 @@ class FTWrapper:
         # self.pad: bool = False
         self.monospace: bool = False
 
-        self.abs_metrics_minx_min: int = 0
-        self.abs_metrics_miny_min: int = 0
-        self.abs_metrics_maxy_max: int = 0
+        # self.abs_metrics_minx_min: int = 0
+        # self.abs_metrics_miny_min: int = 0
+        # self.abs_metrics_maxy_max: int = 0
+        self.abs_metrics: tuple[int, int, int, int, float, float] = (0, 0, 0, 0, 0.0, 0.0)
         self.pen_x_zero: int = 0
         self.notdef_metrics: tuple[int, int, int, int, float, float] | None = None
         self.str_notdef: str = chr(1)
@@ -61,12 +62,6 @@ class FTWrapper:
     def set_font(self, name: str | None = None, size: int = 18) -> None:
         cur_font = self.font
         self.font = pygame.freetype.SysFont(name, size)
-        if self.font.name == "FreeSans" and \
-           name != "FreeSans":
-            try:
-                FTWrapperError(".set_font({name=}, {size=}) no corresponding font available")
-            except FTWrapperError as error:
-                print(error)
         if cur_font is not None:
             self.font.fgcolor = cur_font.fgcolor
             self.font.bgcolor = cur_font.bgcolor
@@ -79,26 +74,18 @@ class FTWrapper:
         self.c_cursor_bgcolor = self.font.bgcolor
         self.set_notdef_metrics()
         self.set_abs_metrics()
-        self.pen_x_zero = abs(self.abs_metrics_minx_min)
+        # self.pen_x_zero = abs(self.abs_metrics_minx_min)
+        self.pen_x_zero = abs(self.abs_metrics[MINX])
         self.set_linespace_factor(1.0)
 
     def set_notdef_metrics(self) -> None:
-        cur_font_pad = self.font.pad
-        self.font.pad = False
-        r_notdef = self.font.get_rect(self.str_notdef)
-        r_two_notdef = self.font.get_rect(self.str_notdef * 2)
-        self.font.pad = cur_font_pad
-        self.notdef_metrics = (r_notdef.x, \
-                               r_notdef.x + r_notdef.w, \
-                               r_notdef.y - r_notdef.h, \
-                               r_notdef.y, \
-                               float(r_two_notdef.w - r_notdef.w), \
-                               float())
+        self.notdef_metrics = get_notdef_metrics(self.font)
 
     def set_abs_metrics(self) -> None:
         """
         with open(self.file_calibration, "r", encoding='utf-8') as file:
             str_calibration = file.read()
+        """
         """
         minx_min = set()
         miny_min = set()
@@ -126,6 +113,8 @@ class FTWrapper:
         self.abs_metrics_miny_min = min(miny_min)
         self.abs_metrics_maxy_max = max(maxy_max)
         self.set_monospace(str_calibration)
+        """
+        self.abs_metrics = get_abs_metrics(self.font, str_calibration, self.notdef_metrics)
 
     def set_monospace(self, str_calibration: str = ""):
         set_advx = set()
@@ -142,10 +131,12 @@ class FTWrapper:
 
     def set_linespace_factor(self, factor: float = 1.0):
         self.linespace_factor = factor
-        self.line_ascend = int((self.abs_metrics_maxy_max * self.linespace_factor) + 0.5)
+        # self.line_ascend = int((self.abs_metrics_maxy_max * self.linespace_factor) + 0.5)
+        self.line_ascend = int((self.abs_metrics[MAXY] * self.linespace_factor) + 0.5)
 
     def set_line_ascend(self, px: int = 0):
-        self.linespace_factor = px / self.abs_metrics_maxy_max
+        # self.linespace_factor = px / self.abs_metrics_maxy_max
+        self.linespace_factor = px / self.abs_metrics[MAXY]
         self.line_ascend = px
 
     def conv_avdx(self, advx: float = 0.0):
@@ -174,7 +165,7 @@ class FTWrapper:
 
     # local
     def get_linespace(self) -> int:
-        return self.line_ascend - self.abs_metrics_miny_min
+        return self.line_ascend - self.abs_metrics[MINY]
 
     def __get_pen_y(self, line: int = 0) -> int:
         return self.line_ascend + (line * self.get_linespace())
@@ -194,10 +185,12 @@ class FTWrapper:
 
     def get_text_size(self, text: str = "") -> tuple[int, int]:
         return self.get_text_width(text), \
-               self.__get_pen_y(len(text.splitlines()) - 1) - self.abs_metrics_miny_min
+               self.__get_pen_y(len(text.splitlines()) - 1) - self.abs_metrics[MINY]
 
-    def get_text_size_max(self, size_chr: tuple[int, int]):
-        pass
+    def get_text_size_chr(self, size_chr: tuple[int, int]) -> tuple[int, int]:
+        return self.pen_x_zero + int(((size_chr[X] - 1) * self.abs_metrics[ADVX]) + 0.5) + \
+               max(self.abs_metrics[MINX], int(self.abs_metrics[ADVX] + 0.5)), \
+               size_chr[Y] * self.get_linespace()
 
     # transform
     def tranform_to_global(self, axe: int = 0, dist: int = 0, area_axe: int = 0) -> int:
@@ -222,9 +215,7 @@ class FTWrapper:
                 rect = area.clip(rect)
         return rect
 
-
     # get rects
-
     def get_tile_rects(self, dest: tuple[int, int] = (0, 0), text: str = "", area: pygame.Rect = None):
         for line, str_line in enumerate(text.splitlines(self.keeplinebreaks)):
             pen_y = self.__get_pen_y(line)
@@ -380,8 +371,12 @@ class FTWrapper:
                             -> tuple[int, int, int]:
 
         if area is not None:
+            """
             if area.bottom <= self.__get_pen_y(line) - self.line_ascend or \
                area.top >= self.__get_pen_y(line) - self.abs_metrics_miny_min:
+            """
+            if area.bottom <= self.__get_pen_y(line) - self.line_ascend or \
+               area.top >= self.__get_pen_y(line) - self.abs_metrics[MINY]:
                 start_area = self.pen_x_zero, 0
                 end_area = 0
             else:
@@ -449,6 +444,7 @@ class FTWrapper:
                           dest: tuple[int, int] = (0, 0), \
                           text: str = "") \
                           -> pygame.Rect:
+        # TODO: create rect.
         for line, str_line in enumerate(text.splitlines(self.keeplinebreaks)):
             surf_line, rect_line = self.font.render(str_line)
             blit_x = dest[X] + self.pen_x_zero + rect_line.x
@@ -463,13 +459,8 @@ class FTWrapper:
                         area: pygame.Rect | None = None, \
                         sectors: dict | None = None) \
                         -> str | None:
-
-        PEN_X = 0
-        START = 1
-        END = 2
-
+        PEN_X, START, END = range(3)
         # str_diagnose = str()
-
         for line, textline in enumerate(text.splitlines(self.keeplinebreaks)):
             match = self.get_line_match(textline, line, area, sectors)
             if match[START] != match[END]:
@@ -490,9 +481,7 @@ class FTWrapper:
                 blit_area_h = min(self.__get_pen_y(line) - rect_line.y + rect_line.h, area.bottom) - (self.__get_pen_y(line) - ascend)
 
                 source.blit(surf_line, (blit_x, blit_y), pygame.Rect(blit_area_x, blit_area_y, blit_area_w, blit_area_h))
-                
                 # str_diagnose += f"{line} {match}\n"
-                
         return None
 
 

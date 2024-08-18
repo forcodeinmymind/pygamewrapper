@@ -16,7 +16,20 @@ def init():
         pygame.freetype.init()
     global font
     font = FTWrapper()
-    font.set_font(name="Roboto Mono Regular", size=18)
+    """
+    # font.set_font(name="Roboto Mono Regular", size=18)
+    font.set_font(name="robotomono", size=18)
+    """
+    font_name = "roboto"
+    for sys_font_name in pygame.freetype.get_fonts():
+        if font_name in sys_font_name.lower():
+            font_name = sys_font_name
+            font.set_font(font_name, size=18)
+            break
+    else:
+        raise KeyError(f"{font_name=} not in pygame.freetype.get_fonts()")
+    if font.font.name == "FreeSans":
+        raise KeyError(f"Requested {font_name=}. Currently used {font.font.name=}.")
     print(f"pygamegui.font={font}")
     print(font.str_attrs())
 

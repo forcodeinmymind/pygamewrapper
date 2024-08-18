@@ -8,6 +8,7 @@ X = 0
 Y = 1
 
 MINX, MAXX, MINY, MAXY, ADVX, ADVY = range(6)
+metrics_type_names = ("minx", "maxx", "miny", "maxy", "advx", "advy")
 
 # str_calibration = r"0123456789abcdefghijklmnopqrstuvwxyzäöüABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ !\"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ ¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ·¸¹º»¼½¾¿Ææ×ØÝÞßç÷øþĦħĿŀŁłŒœŦŧſƋƉƋƌƍƏƐƑƔƕƘƢƣƥƦƧƩƱ↵↓↔←→↑·☼ϟ☾❅❆♁▲▼►◄■▄▬▀░▒▓█░▒▓│┤║╣╗╝¢┐└┴┬├─┼╚╔╩╦╠═╬♛♕♚♔♜♖♝♗♞♘♟♙☗☖♠♣♦♥❥♡♢♤♧⚀⚁⚂⚃⚄⚅⚇⚆⚈⚉♚♛♜♝♞♟♔♕♖♗♘♙♠♣♥♦♤♧♡♢☗☖"
 path = os.path.dirname(__file__)

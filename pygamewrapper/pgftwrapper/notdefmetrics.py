@@ -12,7 +12,7 @@ def get_notdef_metrics(font: pygame.freetype.Font) \
     cur_font_pad = font.pad
     font.pad = False
 
-    r_notdef = self.font.get_rect(str_notdef)
+    r_notdef = font.get_rect(str_notdef)
     r_two_notdef = font.get_rect(str_notdef * 2)
 
     font.pad = cur_font_pad
