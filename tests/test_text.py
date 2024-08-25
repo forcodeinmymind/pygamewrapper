@@ -9,6 +9,7 @@ import string
 pygamewrapper.pygamegui.init()
 pygamewrapper.pygamegui.get_font().font.fgcolor = pygamewrapper.main.pygame.Color("tan1")
 pygamewrapper.pygamegui.get_font().font.bgcolor = pygamewrapper.main.pygame.Color("darkslategrey")
+# pygamewrapper.pygamegui.get_font().keepends = True
 
 
 class Application(pygamewrapper.Pygame):
